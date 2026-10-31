@@ -65,10 +65,19 @@ pub enum BoardError {
 // character or counts the variant carries, and use SIZE instead of typing 10.
 impl fmt::Display for BoardError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "TODO: {self:?}")
+        match self {
+            BoardError::WrongRowWidth { line, found } => {
+                write!(f, "line {line} has {found} characters, but a row needs {SIZE}")
+            }
+            BoardError::BadChar { line, ch } => {
+                write!(f, "line {line} has '{ch}', but only '.' (water) and 'S' (ship) are allowed")
+            }
+            BoardError::WrongRowCount(n) => {
+                write!(f, "found {n} rows, but the board needs exactly {SIZE}")
+            }
+        }
     }
 }
-
 // Why a data file could not be used. PROVIDED: study this as a template.
 #[derive(Debug)]
 pub enum DataError {
@@ -208,23 +217,33 @@ pub fn load_fleet(path: &str) -> Result<FleetReport, DataError> {
 pub fn parse_board(text: &str) -> Result<Board, BoardError> {
     let mut board = new_board();
     let mut row = 0;
-    for line in text.lines() {
+    for (index, line) in text.lines().enumerate() {
+        let line_number = index + 1;
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
         if row >= SIZE {
-            return Err(BoardError::WrongRowCount(row));
+            row += 1;
+            continue;
         }
         let chars: Vec<char> = line.chars().collect();
         if chars.len() != SIZE {
-            return Err(BoardError::WrongRowCount(row));
+            return Err(BoardError::WrongRowWidth {
+                line: line_number,
+                found: chars.len(),
+            });
         }
         for col in 0..SIZE {
             match chars[col] {
                 '.' => board[row][col] = Cell::Water,
                 'S' => board[row][col] = Cell::Ship,
-                _ => return Err(BoardError::WrongRowCount(row)),
+                ch => {
+                    return Err(BoardError::BadChar {
+                        line: line_number,
+                        ch,
+                    })
+                }
             }
         }
         row += 1;
@@ -234,7 +253,6 @@ pub fn parse_board(text: &str) -> Result<Board, BoardError> {
     }
     Ok(board)
 }
-
 // Read a board file.
 // TODO (Task 6): this works, but it is long. Rewrite the body as three lines
 // that use `?` twice, with no match: the From impls above do the conversion.
