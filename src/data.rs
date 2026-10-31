@@ -37,10 +37,22 @@ pub enum ShipLineError {
 // Use MIN_SHIP and MAX_SHIP in the message instead of typing 2 and 5.
 impl fmt::Display for ShipLineError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "TODO: {self:?}")
+        match self {
+            ShipLineError::MissingComma => {
+                write!(f, "needs exactly one comma, like Carrier,5")
+            }
+            ShipLineError::EmptyName => {
+                write!(f, "has no ship name before the comma")
+            }
+            ShipLineError::BadLength(text) => {
+                write!(f, "has length '{text}', which is not a whole number")
+            }
+            ShipLineError::LengthOutOfRange(n) => {
+                write!(f, "has length {n}, outside {MIN_SHIP}-{MAX_SHIP}")
+            }
+        }
     }
 }
-
 // Why the text of a board file was rejected. Line numbers are 1-based file lines.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BoardError {
@@ -146,8 +158,8 @@ pub fn parse_ship_line(line: &str) -> Result<ShipSpec, ShipLineError> {
         Err(_) => return Err(ShipLineError::MissingComma),
     };
     if length < MIN_SHIP || length > MAX_SHIP {
-        return Err(ShipLineError::MissingComma);
-    }
+    return Err(ShipLineError::LengthOutOfRange(length));
+}
     Ok(ShipSpec {
         name: name.to_string(),
         length,
