@@ -268,7 +268,8 @@ pub fn load_board(path: &str) -> Result<Board, DataError> {
 pub fn load_scores(path: &str) -> Result<Vec<ScoreRecord>, DataError> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
-        Err(_) => return Ok(Vec::new()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(DataError::Io(e)),
     };
     let mut records = Vec::new();
     for line in text.lines() {
@@ -278,7 +279,6 @@ pub fn load_scores(path: &str) -> Result<Vec<ScoreRecord>, DataError> {
     }
     Ok(records)
 }
-
 // Append "name,score" as one line, creating the file if needed.
 // Commas in the name are replaced with spaces so the line stays parseable.
 // TODO (Task 8): this works, but it is long. Rewrite it with `?` on the open and
